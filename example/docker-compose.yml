@@ -1,0 +1,12 @@
+services:
+  rp-server:
+    build: .
+    ports:
+      - "443:443"
+    volumes:
+      - ./localhost.crt:/app/localhost.crt:ro
+      - ./localhost.key:/app/localhost.key:ro
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ENABLE_HTTPS=true
