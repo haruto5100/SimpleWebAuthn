@@ -103,10 +103,24 @@ const inMemoryUserDB: { [loggedInUserId: string]: LoggedInUser } = {
   },
 };
 
+/*
+ * Logs information about a WebAuthn ceremony (registration or authentication).
+*/
+function logCeremony(entry: {
+  ceremony: string;
+  receivedAt: number;
+  respondedAt: number;
+  success: boolean;
+  errorCode: string | null;
+}) {
+  console.log(JSON.stringify({ type: 'ceremony_log', ...entry }));
+}
+
 /**
  * Registration (a.k.a. "Registration")
  */
 app.get('/generate-registration-options', async (req, res) => {
+  const receivedAt = Date.now(); // Log the time at which the request was received
   const user = inMemoryUserDB[loggedInUserId];
 
   const {
@@ -157,10 +171,22 @@ app.get('/generate-registration-options', async (req, res) => {
    */
   req.session.currentChallenge = options.challenge;
 
+  /**
+   * Log the ceremony for debugging and analytics purposes
+   */
+  logCeremony({
+    ceremony: 'generate_registration_options',
+    receivedAt,
+    respondedAt: Date.now(),
+    success: true,
+    errorCode: null,
+  });
+
   res.send(options);
 });
 
 app.post('/verify-registration', async (req, res) => {
+  const receivedAt = Date.now();
   const body: RegistrationResponseJSON = req.body;
 
   const user = inMemoryUserDB[loggedInUserId];
@@ -180,6 +206,13 @@ app.post('/verify-registration', async (req, res) => {
   } catch (error) {
     const _error = error as Error;
     console.error(_error);
+    logCeremony({
+      ceremony: 'verify_registration',
+      receivedAt,
+      respondedAt: Date.now(),
+      success: false,
+      errorCode: _error.message,
+    });
     return res.status(400).send({ error: _error.message });
   }
 
@@ -206,6 +239,14 @@ app.post('/verify-registration', async (req, res) => {
 
   req.session.currentChallenge = undefined;
 
+  logCeremony({
+    ceremony: 'verify_registration',
+    receivedAt,
+    respondedAt: Date.now(),
+    success: verified,
+    errorCode: null,
+  });
+
   res.send({ verified });
 });
 
@@ -213,6 +254,7 @@ app.post('/verify-registration', async (req, res) => {
  * Login (a.k.a. "Authentication")
  */
 app.get('/generate-authentication-options', async (req, res) => {
+  const receivedAt = Date.now();
   // You need to know the user by this point
   const user = inMemoryUserDB[loggedInUserId];
 
@@ -240,10 +282,19 @@ app.get('/generate-authentication-options', async (req, res) => {
    */
   req.session.currentChallenge = options.challenge;
 
+   logCeremony({
+    ceremony: 'generate_authentication_options',
+    receivedAt,
+    respondedAt: Date.now(),
+    success: true,
+    errorCode: null,
+  });
+
   res.send(options);
 });
 
 app.post('/verify-authentication', async (req, res) => {
+  const receivedAt = Date.now();
   const body: AuthenticationResponseJSON = req.body;
 
   const user = inMemoryUserDB[loggedInUserId];
@@ -260,6 +311,13 @@ app.post('/verify-authentication', async (req, res) => {
   }
 
   if (!dbCredential) {
+     logCeremony({
+      ceremony: 'verify_authentication',
+      receivedAt,
+      respondedAt: Date.now(),
+      success: false,
+      errorCode: 'Authenticator is not registered with this site',
+    });
     return res.status(400).send({
       error: 'Authenticator is not registered with this site',
     });
@@ -279,6 +337,13 @@ app.post('/verify-authentication', async (req, res) => {
   } catch (error) {
     const _error = error as Error;
     console.error(_error);
+    logCeremony({
+      ceremony: 'verify_authentication',
+      receivedAt,
+      respondedAt: Date.now(),
+      success: false,
+      errorCode: _error.message,
+    });
     return res.status(400).send({ error: _error.message });
   }
 
@@ -290,6 +355,14 @@ app.post('/verify-authentication', async (req, res) => {
   }
 
   req.session.currentChallenge = undefined;
+
+  logCeremony({
+    ceremony: 'verify_authentication',
+    receivedAt,
+    respondedAt: Date.now(),
+    success: verified,
+    errorCode: null,
+  });
 
   res.send({ verified });
 });
