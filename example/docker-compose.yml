@@ -6,7 +6,26 @@ services:
     volumes:
       - ./localhost.crt:/app/localhost.crt:ro
       - ./localhost.key:/app/localhost.key:ro
+      - ./rp.test.crt:/app/rp.test.crt:ro
+      - ./rp.test.key:/app/rp.test.key:ro
     cap_add:
       - NET_ADMIN
     environment:
       - ENABLE_HTTPS=true
+      - RP_ID=rp.test
+    networks:
+      default:
+        aliases:
+          - rp.test
+
+  client:
+    build:
+      context: /Users/goto/webauthn-eval/client
+      dockerfile: Dockerfile.client
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /Users/goto/webauthn-eval/client:/work
+      - /work/node_modules
+    working_dir: /work
+    command: sleep infinity
