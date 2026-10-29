@@ -255,6 +255,11 @@ app.post('/verify-registration', async (req, res) => {
  */
 app.get('/generate-authentication-options', async (req, res) => {
   const receivedAt = Date.now();
+  // [第6週] タイムアウト検証用の人工遅延。環境変数が未設定・0なら何もしない
+  const injectedDelayMs = Number(process.env.DELAY_AUTH_OPTIONS_MS ?? 0);
+  if (injectedDelayMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, injectedDelayMs));
+  }
   // You need to know the user by this point
   const user = inMemoryUserDB[loggedInUserId];
 

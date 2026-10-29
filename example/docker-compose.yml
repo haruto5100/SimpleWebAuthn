@@ -13,6 +13,7 @@ services:
     environment:
       - ENABLE_HTTPS=true
       - RP_ID=rp.test
+      - DELAY_AUTH_OPTIONS_MS=${DELAY_AUTH_OPTIONS_MS:-0}
     networks:
       default:
         aliases:
