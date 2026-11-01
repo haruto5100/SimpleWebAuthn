@@ -44,6 +44,46 @@ const {
   RP_ID = 'localhost',
 } = process.env;
 
+// [第7週] req_log: 全リクエスト(静的ファイル含む)の到着・完了・中断の記録。
+// 時刻は単調時計(process.hrtime.bigint())。mono = このプロセスの起動後のms。
+// conn = 同じTCP接続なら同じ番号(接続の再利用・新規接続の数が分かる)。
+// ev=in: ヘッダー受信時 / ev=out: レスポンスの終了時(finished=false は途中で切れた)
+const REQ_LOG_T0 = process.hrtime.bigint();
+const reqMono = () => Number(process.hrtime.bigint() - REQ_LOG_T0) / 1e6;
+const connIds = new WeakMap<object, number>();
+let connSeq = 0;
+app.use((req, res, next) => {
+  const sock = req.socket;
+  let conn = connIds.get(sock);
+  if (conn === undefined) {
+    conn = ++connSeq;
+    connIds.set(sock, conn);
+  }
+  const inMono = reqMono();
+  let bodyMono: number | null = null;
+  req.on('end', () => {
+    bodyMono = reqMono();
+  });
+  const base = { type: 'req_log', method: req.method, url: req.originalUrl, conn };
+  console.log(JSON.stringify({ ...base, ev: 'in', mono: Number(inMono.toFixed(3)) }));
+  res.on('close', () => {
+    const outMono = reqMono();
+    console.log(
+      JSON.stringify({
+        ...base,
+        ev: 'out',
+        mono: Number(outMono.toFixed(3)),
+        durMs: Number((outMono - inMono).toFixed(3)),
+        bodyMs: bodyMono === null ? null : Number((bodyMono - inMono).toFixed(3)),
+        reqComplete: req.complete,
+        status: res.statusCode,
+        finished: res.writableFinished,
+      }),
+    );
+  });
+  next();
+});
+
 app.use(express.static('./public/'));
 app.use(express.json());
 app.use(
