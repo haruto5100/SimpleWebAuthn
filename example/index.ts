@@ -161,6 +161,12 @@ function logCeremony(entry: {
  */
 app.get('/generate-registration-options', async (req, res) => {
   const receivedAt = Date.now(); // Log the time at which the request was received
+  // [第7週] ハーネス専用: 登録のたびに資格情報を空にし、各試行を「初回の登録」から始める。
+  // 応答サイズ(excludeCredentials / allowCredentials)が試行間で一定になり、資格情報の上限(64件)にも当たらない。
+  // 検証ロジックには触れない。既定は無効(環境変数が '1' のときだけ有効)
+  if (process.env.RESET_CREDENTIALS_ON_REGISTER === '1') {
+    inMemoryUserDB[loggedInUserId].credentials = [];
+  }
   const user = inMemoryUserDB[loggedInUserId];
 
   const {
