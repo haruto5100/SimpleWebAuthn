@@ -15,6 +15,7 @@ services:
       - RP_ID=rp.test
       - DELAY_AUTH_OPTIONS_MS=${DELAY_AUTH_OPTIONS_MS:-0}
       - RESET_CREDENTIALS_ON_REGISTER=${RESET_CREDENTIALS_ON_REGISTER:-1}
+      - SERVER_KEEPALIVE_TIMEOUT_MS=${SERVER_KEEPALIVE_TIMEOUT_MS:-65000}
     networks:
       default:
         aliases:

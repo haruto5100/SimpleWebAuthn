@@ -423,7 +423,7 @@ if (ENABLE_HTTPS) {
   const port = 443;
   expectedOrigin = `https://${rpID}`;
 
-  https
+  const httpsServer = https
     .createServer(
       {
         /**
@@ -437,6 +437,15 @@ if (ENABLE_HTTPS) {
     .listen(port, host, () => {
       console.log(`🚀 Server ready at ${expectedOrigin} (${host}:${port})`);
     });
+  // [第7週] ハーネス専用: 無通信の接続を閉じるまでの時間を伸ばす(既定は Node の 5000 ms + バッファ 1000 ms)。
+  // 待機(生体認証操作の模擬)で無通信が6秒を超える条件で、サーバー側の接続切れが結果に混ざるのを避ける。
+  // 環境変数が未設定・0 のときは Node の既定のまま。headersTimeout は keepAliveTimeout より大きくする(Node の推奨)
+  const keepAliveMs = Number(process.env.SERVER_KEEPALIVE_TIMEOUT_MS ?? 0);
+  if (keepAliveMs > 0) {
+    httpsServer.keepAliveTimeout = keepAliveMs;
+    httpsServer.headersTimeout = Math.max(httpsServer.headersTimeout, keepAliveMs + 1000);
+  }
+  console.log(`keepAliveTimeout=${httpsServer.keepAliveTimeout} headersTimeout=${httpsServer.headersTimeout}`);
 } else {
   const host = '127.0.0.1';
   const port = 8000;
